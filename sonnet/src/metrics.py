@@ -62,7 +62,13 @@ class Sum(Metric):
   def update(self, value: tf.Tensor):
     """See base class."""
     self.initialize(value)
-    self.sum.assign_add(value)
+    self._checked_sum.assign_add(value)
+
+  @property
+  def _checked_sum(self):
+    if self.sum is None:
+      raise ValueError("Metric is not initialized.  Call `initialize` first.")
+    return self.sum
 
   @property
   def value(self) -> tf.Tensor:
@@ -71,6 +77,8 @@ class Sum(Metric):
 
   def reset(self):
     """See base class."""
+    if self.sum is None:
+      raise ValueError("Metric is not initialized.  Call `initialize` first.")
     self.sum.assign(tf.zeros_like(self.sum))
 
 
@@ -90,15 +98,23 @@ class Mean(Metric):
   def update(self, value: tf.Tensor):
     """See base class."""
     self.initialize(value)
-    self.sum.assign_add(value)
+    self._checkedsum.assign_add(value)
     self.count.assign_add(1)
+
+  @property
+  def _checked_sum(self) -> tf.Variable:
+    if self.sum is None:
+      raise ValueError("Metric is not initialized.  Call `initialize` first.")
+    return self.sum
 
   @property
   def value(self) -> tf.Tensor:
     """See base class."""
     # TODO(cjfj): Assert summed type is floating-point?
-    return self.sum / tf.cast(self.count, dtype=self.sum.dtype)
+    return self._checked_sum / tf.cast(
+        self.count, dtype=self._checked_sum.dtype
+    )
 
   def reset(self):
-    self.sum.assign(tf.zeros_like(self.sum))
+    self._checked_sum.assign(tf.zeros_like(self._checked_sum))
     self.count.assign(0)
